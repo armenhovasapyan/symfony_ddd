@@ -1,0 +1,42 @@
+services:
+    symfony:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      image: symfony:latest
+      container_name: symfony
+      hostname: symfony
+      pull_policy: build
+      env_file:
+        - .env
+      volumes:
+        - .:/var/www/html
+      healthcheck:
+        test: [ "CMD-SHELL", "php -r \"exit(@fsockopen('127.0.0.1', 9000) ? 0 : 1);\" || exit 1" ]
+        interval: 3s
+        timeout: 3s
+        retries: 10
+        start_period: 15s
+      networks:
+        - docker_containers
+
+    symfony-nginx:
+      image: nginx:alpine
+      #    pull_policy: always
+      container_name: symfony-nginx
+      ports:
+        - "80:80"
+      volumes:
+        - .:/var/www/html:ro
+        - ./configuration/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      depends_on:
+        symfony:
+          condition: service_healthy
+      networks:
+        - docker_containers
+
+networks:
+    docker_containers:
+        name: docker_containers
+        driver: bridge
+        external: true
